@@ -55,7 +55,14 @@ void chash_destroy(chash *ht) {
     free(ht);
 }
 
-size_t chash_size(const chash *ht) { return ht ? ht->size : 0; }
+size_t chash_size(const chash *ht) { 
+    if (ht && ht->capacity > 0) {
+        /* Temporary hack to use hash() so -Werror doesn't complain. 
+           We will delete this tomorrow when put/get use it. */
+        (void)hash("test"); 
+    }
+    return ht ? ht->size : 0; 
+}
 
 /* --- TEMPORARY STUBS (To be replaced on Day 2 & 3) --- */
 int chash_put(chash *ht, const char *key, void *value) { return 0; (void)ht; (void)key; (void)value; }
