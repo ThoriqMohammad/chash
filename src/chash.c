@@ -55,16 +55,50 @@ void chash_destroy(chash *ht) {
     free(ht);
 }
 
-size_t chash_size(const chash *ht) { 
-    if (ht && ht->capacity > 0) {
-        /* Temporary hack to use hash() so -Werror doesn't complain. 
-           We will delete this tomorrow when put/get use it. */
-        (void)hash("test"); 
+size_t chash_size(const chash *ht) { return ht ? ht->size : 0; }
+
+int chash_put(chash *ht, const char *key, void *value) {
+    /* Note: We will add resizing here tomorrow (Day 4) */
+    size_t index = hash(key) % ht->capacity;
+    
+    for (size_t i = 0; i < ht->capacity; i++) {
+        size_t current = (index + i) % ht->capacity;
+        entry *e = &ht->entries[current];
+        
+        if (e->state == EMPTY || e->state == TOMBSTONE) {
+            /* Found an empty slot (or a reusable tombstone) */
+            e->key = strdup(key);
+            if (!e->key) return 0;
+            e->value = value;
+            e->state = ACTIVE;
+            ht->size++;
+            return 1;
+        } else if (e->state == ACTIVE && strcmp(e->key, key) == 0) {
+            /* Key already exists, update its value */
+            e->value = value;
+            return 1;
+        }
     }
-    return ht ? ht->size : 0; 
+    return 0; /* Table is completely full */
 }
 
-/* --- TEMPORARY STUBS (To be replaced on Day 2 & 3) --- */
-int chash_put(chash *ht, const char *key, void *value) { return 0; (void)ht; (void)key; (void)value; }
-void *chash_get(const chash *ht, const char *key) { return NULL; (void)ht; (void)key; }
+void *chash_get(const chash *ht, const char *key) {
+    size_t index = hash(key) % ht->capacity;
+    
+    for (size_t i = 0; i < ht->capacity; i++) {
+        size_t current = (index + i) % ht->capacity;
+        entry *e = &ht->entries[current];
+        
+        if (e->state == EMPTY) {
+            /* We hit an empty slot. If the key was in the table, 
+               it would have been placed before this empty slot. */
+            return NULL; 
+        } else if (e->state == ACTIVE && strcmp(e->key, key) == 0) {
+            return e->value; /* Found it! */
+        }
+        /* If it's a TOMBSTONE, just keep looking */
+    }
+    return NULL; /* Looked through the whole table and didn't find it */
+}
+
 int chash_delete(chash *ht, const char *key) { return 0; (void)ht; (void)key; }
