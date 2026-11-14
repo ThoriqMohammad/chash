@@ -101,4 +101,23 @@ void *chash_get(const chash *ht, const char *key) {
     return NULL; /* Looked through the whole table and didn't find it */
 }
 
-int chash_delete(chash *ht, const char *key) { return 0; (void)ht; (void)key; }
+int chash_delete(chash *ht, const char *key) {
+    size_t index = hash(key) % ht->capacity;
+    
+    for (size_t i = 0; i < ht->capacity; i++) {
+        size_t current = (index + i) % ht->capacity;
+        entry *e = &ht->entries[current];
+        
+        if (e->state == EMPTY) {
+            return 0; /* Hit an empty slot, key isn't here */
+        } else if (e->state == ACTIVE && strcmp(e->key, key) == 0) {
+            free(e->key);
+            e->key = NULL;
+            e->value = NULL;
+            e->state = TOMBSTONE; /* Mark as deleted, don't make it EMPTY */
+            ht->size--;
+            return 1;
+        }
+    }
+    return 0;
+}
