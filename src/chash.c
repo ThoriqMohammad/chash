@@ -21,6 +21,8 @@ struct chash {
     entry *entries; /* Replaces the two separate arrays */
 };
 
+static void chash_resize(chash *ht, size_t new_capacity);
+
 /* FNV-1a hash function */
 static uint64_t hash(const char *str) {
     uint64_t hash = 14695981039346656037ULL;
@@ -29,6 +31,28 @@ static uint64_t hash(const char *str) {
         hash *= 1099511628211ULL;
     }
     return hash;
+}
+
+static void chash_resize(chash *ht, size_t new_capacity) {
+    entry *old_entries = ht->entries;
+    size_t old_capacity = ht->capacity;
+
+    /* Allocate new array */
+    ht->entries = calloc(new_capacity, sizeof *ht->entries);
+    if (!ht->entries) return; /* Handle allocation failure (silently for now) */
+    
+    ht->capacity = new_capacity;
+    ht->size = 0; /* Reset size. The put() calls below will increment it again. */
+
+    /* Re-insert all ACTIVE entries from the old array */
+    for (size_t i = 0; i < old_capacity; i++) {
+        if (old_entries[i].state == ACTIVE) {
+            chash_put(ht, old_entries[i].key, old_entries[i].value);
+            free(old_entries[i].key); /* put() duplicates the key, so free the old one */
+        }
+    }
+    
+    free(old_entries); /* Free the old array */
 }
 
 chash *chash_create(size_t initial_capacity) {
@@ -58,7 +82,11 @@ void chash_destroy(chash *ht) {
 size_t chash_size(const chash *ht) { return ht ? ht->size : 0; }
 
 int chash_put(chash *ht, const char *key, void *value) {
-    /* Note: We will add resizing here tomorrow (Day 4) */
+    
+    if (ht->size * 10 >= ht->capacity * 7) {
+        chash_resize(ht, ht->capacity * 2);
+    }
+    
     size_t index = hash(key) % ht->capacity;
     
     for (size_t i = 0; i < ht->capacity; i++) {
