@@ -30,3 +30,7 @@ test: $(TEST_BINS)
 
 clean:
 > rm -rf build
+
+build/bench: bench/bench.c src/chash.c include/chash.h
+> @mkdir -p build
+> $(CC) $(CFLAGS) bench/bench.c src/chash.c -o $@ $(LDFLAGS)
