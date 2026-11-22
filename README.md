@@ -8,7 +8,7 @@ Built as a learning project to practice C memory management, testing, and CI.
 ## Status
 - [x] Week 1: scaffolding, API, build, tests, CI
 - [x] Week 2: hashing, linear probing, resize, tombstones
-- [ ] Week 3: benchmarks, README polish
+- [x] Week 3: benchmarks, README polish
 
 ## API
 See `include/chash.h`. Summary:
