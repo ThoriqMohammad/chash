@@ -82,32 +82,43 @@ void chash_destroy(chash *ht) {
 size_t chash_size(const chash *ht) { return ht ? ht->size : 0; }
 
 int chash_put(chash *ht, const char *key, void *value) {
-    
+    /* Check load factor (70%) */
     if (ht->size * 10 >= ht->capacity * 7) {
         chash_resize(ht, ht->capacity * 2);
     }
-    
+
     size_t index = hash(key) % ht->capacity;
-    
+    entry *first_tombstone = NULL;
+
     for (size_t i = 0; i < ht->capacity; i++) {
         size_t current = (index + i) % ht->capacity;
         entry *e = &ht->entries[current];
-        
-        if (e->state == EMPTY || e->state == TOMBSTONE) {
-            /* Found an empty slot (or a reusable tombstone) */
-            e->key = strdup(key);
-            if (!e->key) return 0;
-            e->value = value;
-            e->state = ACTIVE;
-            ht->size++;
-            return 1;
-        } else if (e->state == ACTIVE && strcmp(e->key, key) == 0) {
-            /* Key already exists, update its value */
+
+        if (e->state == ACTIVE && strcmp(e->key, key) == 0) {
+            /* Found the key! Update the value. */
             e->value = value;
             return 1;
         }
+        
+        if (e->state == TOMBSTONE && first_tombstone == NULL) {
+            /* Remember the first tombstone we see, but KEEP LOOKING */
+            first_tombstone = e; 
+        }
+        
+        if (e->state == EMPTY) {
+            /* Hit an empty slot. We know the key isn't in the table.
+               If we saw a tombstone, insert there. Otherwise, insert here. */
+            entry *target = (first_tombstone != NULL) ? first_tombstone : e;
+            
+            target->key = strdup(key);
+            if (!target->key) return 0;
+            target->value = value;
+            target->state = ACTIVE;
+            ht->size++;
+            return 1;
+        }
     }
-    return 0; /* Table is completely full */
+    return 0; /* Table is full */
 }
 
 void *chash_get(const chash *ht, const char *key) {
