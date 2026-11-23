@@ -54,9 +54,32 @@ static void test_tombstone(void) {
     chash_destroy(ht);
 }
 
+static void test_tombstone_collision(void) {
+    chash *ht = chash_create(8);
+    int val1 = 1, val2 = 2, val3 = 3;
+    
+    /* k0 and k8 collide in a capacity-8 table with FNV-1a */
+    chash_put(ht, "k0", &val1);
+    chash_put(ht, "k8", &val2);
+    
+    /* Delete k0. It becomes a tombstone. */
+    chash_delete(ht, "k0");
+    
+    /* Now update k8. If the bug exists, it will insert a DUPLICATE k8 
+       at the tombstone slot instead of updating the existing k8. */
+    chash_put(ht, "k8", &val3);
+    
+    /* If the bug is fixed, size should STILL be 1 (only k8 is in the table) */
+    ASSERT_EQ_INT(chash_size(ht), 1); 
+    ASSERT(chash_get(ht, "k8") == &val3);
+    
+    chash_destroy(ht);
+}
+
 int main(void) {
     test_collision();
     test_resize();
     test_tombstone();
+    test_tombstone_collision();
     TEST_SUMMARY();
 }
