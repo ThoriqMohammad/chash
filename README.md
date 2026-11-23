@@ -46,7 +46,7 @@ The benchmark demonstrates that even as the table resizes dynamically to hold 1,
 - **Open addressing (linear probing) vs. Chaining:** I chose linear probing because it stores entries in a contiguous array, offering better CPU cache locality compared to following pointers in a linked list.
 - **FNV-1a Hash Function:** Selected for its speed and excellent distribution for string keys, minimizing collisions without the overhead of cryptographic hashes.
 - **Load factor and resizing:** The table doubles its capacity when it reaches a 70% load factor. This keeps probe lengths short and maintains O(1) average performance.
-- **Tombstones for deletion:** When an item is deleted, it is marked as a `TOMBSTONE` rather than `EMPTY`. If it were marked `EMPTY`, it would break the linear probing chain for colliding keys inserted after it.
+- **Tombstones for deletion:** When an item is deleted, it is marked as a `TOMBSTONE`. If it were marked `EMPTY`, it would break the linear probing chain. To prevent duplicate keys, `put()` remembers the first tombstone it encounters but continues probing until it finds the actual key or an `EMPTY` slot.
 - **Key ownership:** The table takes ownership of string keys by `strdup()`-ing them on insert and `free()`-ing them on destroy. Values (`void *`) are owned by the caller.
 - **Known limitations:** Not thread-safe. `chash_get` returns `NULL` for both "key not found" and "key found with a NULL value".
 
